@@ -4,19 +4,32 @@ import shutil
 import gzip
 import glob
 import os.path
-import re
-
-## Download the file from `url` and save it locally under `file_name`:
-with urllib.request.urlopen("http://gb.archive.ubuntu.com/ubuntu/dists/xenial/main/binary-amd64/Packages.gz") as response, open("package.gz", 'wb') as out_file:
+import string
+packs = dict()
+def convertPackagesToDict(url):
+  with urllib.request.urlopen(url) as response, open("package.gz", 'wb') as out_file:
     shutil.copyfileobj(response, out_file)
-inF = gzip.open("package.gz", 'rb')
-outF = open("package.txt", 'wb')
-outF.write( inF.read() )
-inF.close()
-outF.close()
-packages = open('package.txt', "r" )
-install = input("What package would you like to install?\n")
-if install.lower() in open('package.txt').read():
-    print ("This package is in the default Ubuntu repositories.\nThe program will now continue.")
-else:
-	print ("This package isn't in the default Ubuntu repositories.\nThe program will now quit.")
+  pkgfile = gzip.open("package.gz", 'rb')
+  pkg=None
+  depends=None
+  for line in pkgfile:
+    line=line.decode('utf-8').rstrip()
+    if line.startswith(('Package:')):
+      pkg = line[9:]
+    elif line.startswith(('Depends:')):
+       depends = line[9:]
+    elif line == "":
+       if pkg != None:
+         packs[pkg] = depends
+    else:
+    	pass 
+  return packs
+
+if __name__ == "__main__":
+  convertPackagesToDict("http://gb.archive.ubuntu.com/ubuntu/dists/xenial/main/binary-amd64/Packages.gz")
+  #convertPackagesToDict("http://gb.archive.ubuntu.com/ubuntu/dists/xenial/multiverse/binary-amd64/Packages.gz")
+  #convertPackagesToDict("http://gb.archive.ubuntu.com/ubuntu/dists/xenial/restricted/binary-amd64/Packages.gz")
+  #convertPackagesToDict("http://gb.archive.ubuntu.com/ubuntu/dists/xenial/universe/binary-amd64/Packages.gz")
+  install = input("What package would you like to install?\n")
+  dependencies = packs[install]
+  print("You need to install " + dependencies)
